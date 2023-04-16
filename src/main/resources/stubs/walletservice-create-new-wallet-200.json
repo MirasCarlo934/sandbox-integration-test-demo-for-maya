@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/wallets"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "id": "09fcbb88-9a3c-4a68-a9d8-bbad8865a41a"
+    },
+    "headers": {
+      "Content-Type": "text/plain"
+    }
+  }
+}
