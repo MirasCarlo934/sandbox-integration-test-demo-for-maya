@@ -6,10 +6,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-public class RestExampleController {
+public class PersonController {
     private final PersonCreationService personCreationService;
 
-    public RestExampleController(PersonCreationService personCreationService) {
+    public PersonController(PersonCreationService personCreationService) {
         this.personCreationService = personCreationService;
     }
 
