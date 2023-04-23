@@ -23,11 +23,11 @@ public class PersonCreationService {
         this.personRepository = personRepository;
     }
 
-    public PersonRequest create(PersonRequest personRequest) {
+    public Person create(PersonRequest personRequest) {
         personExistsValidatorService.validate(personRequest);
         Wallet wallet = restWalletClient.create();
         Person person = new Person(UUID.randomUUID().toString(), personRequest.name(), personRequest.address(), personRequest.age(), wallet.id());
         personRepository.save(person);
-        return personRequest;
+        return person;
     }
 }
