@@ -2,7 +2,7 @@ package com.example.integrationtestdemoformaya.core;
 
 import com.example.integrationtestdemoformaya.data.PersonRepository;
 import com.example.integrationtestdemoformaya.data.exceptions.PersonAlreadyExistsException;
-import com.example.integrationtestdemoformaya.domain.Person;
+import com.example.integrationtestdemoformaya.web.request.PersonRequest;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,9 +13,9 @@ public class PersonExistsValidatorService {
         this.personRepository = personRepository;
     }
 
-    public void validate(Person person) {
-        if (personRepository.get(person.name()) != null) {
-            throw new PersonAlreadyExistsException(person);
+    public void validate(PersonRequest personRequest) {
+        if (personRepository.get(personRequest.name()) != null) {
+            throw new PersonAlreadyExistsException(personRequest);
         }
     }
 }

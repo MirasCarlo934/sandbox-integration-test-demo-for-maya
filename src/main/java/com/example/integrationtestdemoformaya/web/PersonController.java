@@ -1,7 +1,7 @@
 package com.example.integrationtestdemoformaya.web;
 
 import com.example.integrationtestdemoformaya.core.PersonCreationService;
-import com.example.integrationtestdemoformaya.domain.Person;
+import com.example.integrationtestdemoformaya.web.request.PersonRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +15,7 @@ public class PersonController {
 
     @PostMapping("/persons")
     @ResponseStatus(HttpStatus.OK)
-    public Person createPerson(@RequestBody Person person) {
-        return personCreationService.create(person);
+    public PersonRequest createPerson(@RequestBody PersonRequest personRequest) {
+        return personCreationService.create(personRequest);
     }
 }

@@ -1,0 +1,6 @@
+uri:
+  wallet:
+    scheme: http
+    host: localhost:8080
+    resource-path: 'wallets'
+    timeout: 3000
