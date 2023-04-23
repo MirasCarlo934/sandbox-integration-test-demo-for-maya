@@ -9,15 +9,15 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 
 @Component
 public class RestWalletClient {
-    private final WebClient webClient;
+    private final WebClient walletWebClient;
 
-    public RestWalletClient(WebClient webClient) {
-        this.webClient = webClient;
+    public RestWalletClient(WebClient walletWebClient) {
+        this.walletWebClient = walletWebClient;
     }
 
     public Wallet create() {
         try {
-            return webClient.post()
+            return walletWebClient.post()
                     .contentType(MediaType.APPLICATION_JSON)
                     .retrieve()
                     .bodyToMono(Wallet.class)
