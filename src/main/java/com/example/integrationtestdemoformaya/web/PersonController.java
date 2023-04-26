@@ -1,8 +1,9 @@
 package com.example.integrationtestdemoformaya.web;
 
+import com.example.integrationtestdemoformaya.command.CreatePersonCommand;
 import com.example.integrationtestdemoformaya.core.PersonCreationService;
 import com.example.integrationtestdemoformaya.domain.Person;
-import com.example.integrationtestdemoformaya.web.request.PersonRequest;
+import com.example.integrationtestdemoformaya.web.request.CreatePersonRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +17,11 @@ public class PersonController {
 
     @PostMapping("/persons")
     @ResponseStatus(HttpStatus.OK)
-    public Person createPerson(@RequestBody PersonRequest personRequest) {
-        return personCreationService.create(personRequest);
+    public Person createPerson(
+            @RequestHeader("request-reference-no") String rrn,
+            @RequestHeader("channel") String channel,
+            @RequestBody CreatePersonRequest createPersonRequest) {
+        CreatePersonCommand command = CreatePersonCommand.fromRequest(createPersonRequest, rrn, channel);
+        return personCreationService.create(command);
     }
 }

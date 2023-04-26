@@ -3,7 +3,7 @@ package com.example.integrationtestdemoformaya.web.request;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
-public record PersonRequest(
+public record CreatePersonRequest(
         @NotNull(message = "name is required")
         String name,
 

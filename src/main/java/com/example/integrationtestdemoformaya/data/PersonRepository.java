@@ -1,7 +1,6 @@
 package com.example.integrationtestdemoformaya.data;
 
 import com.example.integrationtestdemoformaya.domain.Person;
-import com.example.integrationtestdemoformaya.web.request.PersonRequest;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
@@ -9,7 +8,7 @@ import java.util.List;
 
 @Repository
 public class PersonRepository {
-    private List<Person> persons = new ArrayList<>(List.of(
+    private final List<Person> persons = new ArrayList<>(List.of(
             new Person(
                     "1050b6b7-eb76-4dff-8d47-23a8120cfe21",
                     "Carlo Miras",

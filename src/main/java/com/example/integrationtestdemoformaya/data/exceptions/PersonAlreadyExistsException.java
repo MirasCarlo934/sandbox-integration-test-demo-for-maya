@@ -1,9 +1,9 @@
 package com.example.integrationtestdemoformaya.data.exceptions;
 
-import com.example.integrationtestdemoformaya.web.request.PersonRequest;
+import com.example.integrationtestdemoformaya.command.CreatePersonCommand;
 
 public class PersonAlreadyExistsException extends RuntimeException {
-    public PersonAlreadyExistsException(PersonRequest personRequest) {
-        super(String.format("Person '%s' already exists", personRequest.name()));
+    public PersonAlreadyExistsException(CreatePersonCommand createPersonCommand) {
+        super(String.format("Person '%s' already exists", createPersonCommand.name()));
     }
 }
