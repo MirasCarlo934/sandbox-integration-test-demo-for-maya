@@ -4,3 +4,16 @@ spring:
 
 server:
   port: 9000
+
+response:
+  error-mappings:
+    DEFAULT:
+      status: 500
+      message: 'Internal server error'
+    PersonAlreadyExistsException:
+      status: 400
+      message: 'Person already exists'
+    PersonAddressAlreadyTakenException:
+      status: 400
+      message: 'Address already taken'
+
