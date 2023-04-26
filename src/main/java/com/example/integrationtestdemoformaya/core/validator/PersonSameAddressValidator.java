@@ -1,21 +1,21 @@
 package com.example.integrationtestdemoformaya.core.validator;
 
 import com.example.integrationtestdemoformaya.command.CreatePersonCommand;
+import com.example.integrationtestdemoformaya.core.exceptions.PersonAddressAlreadyTakenException;
 import com.example.integrationtestdemoformaya.data.PersonRepository;
-import com.example.integrationtestdemoformaya.core.exceptions.PersonAlreadyExistsException;
 import org.springframework.stereotype.Component;
 
 @Component
-public class PersonAlreadyExistsValidator implements Validator<CreatePersonCommand> {
+public class PersonSameAddressValidator implements Validator<CreatePersonCommand> {
     private final PersonRepository personRepository;
 
-    public PersonAlreadyExistsValidator(PersonRepository personRepository) {
+    public PersonSameAddressValidator(PersonRepository personRepository) {
         this.personRepository = personRepository;
     }
 
     public void validate(CreatePersonCommand command) {
-        if (personRepository.getByName(command.name()) != null) {
-            throw new PersonAlreadyExistsException(command);
+        if (personRepository.getByAddress(command.address()) != null) {
+            throw new PersonAddressAlreadyTakenException(command);
         }
     }
 }

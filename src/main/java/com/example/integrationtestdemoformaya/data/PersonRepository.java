@@ -16,9 +16,16 @@ public class PersonRepository {
                     23,
                     "29ca7596-8255-477e-b77c-462ad7c3f093")));
 
-    public Person get(String name) {
+    public Person getByName(String name) {
         for (Person person : persons) {
             if (name.equals(person.name())) return person;
+        }
+        return null;
+    }
+
+    public Person getByAddress(String address) {
+        for (Person person : persons) {
+            if (address.equals(person.address())) return person;
         }
         return null;
     }

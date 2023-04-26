@@ -30,11 +30,11 @@ public class ControllerExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     protected ResponseEntity<ErrorResponseBody> handleRuntimeExceptions(RuntimeException ex) {
         ErrorResponseMapping mapping = errorMappings.get(ex.getClass().getSimpleName());
-        System.out.println(errorMappings.keySet());
-        System.out.println(ex.getClass().getSimpleName());
+        String message = ex.getMessage();
         if (mapping == null) {
             mapping = errorMappings.get(DEFAULT_MAPPING);
+            message = mapping.message();
         }
-        return new ResponseEntity<>(new ErrorResponseBody(mapping.message()), HttpStatus.valueOf(mapping.status()));
+        return new ResponseEntity<>(new ErrorResponseBody(message), HttpStatus.valueOf(mapping.status()));
     }
 }
