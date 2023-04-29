@@ -14,7 +14,7 @@ public class PersonAlreadyExistsValidator implements Validator<CreatePersonComma
     }
 
     public void validate(CreatePersonCommand command) {
-        if (personRepository.getByName(command.name()) != null) {
+        if (personRepository.getFirstByName(command.name()) != null) {
             throw new PersonAlreadyExistsException(command);
         }
     }

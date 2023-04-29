@@ -17,7 +17,7 @@
             <column name="age" type="INT">
                 <constraints nullable="false"/>
             </column>
-            <column name="walletId" type="UUID">
+            <column name="wallet_id" type="UUID">
                 <constraints nullable="false"/>
             </column>
         </createTable>

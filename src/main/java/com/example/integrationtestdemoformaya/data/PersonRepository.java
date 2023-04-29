@@ -1,36 +1,11 @@
 package com.example.integrationtestdemoformaya.data;
 
 import com.example.integrationtestdemoformaya.domain.Person;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.UUID;
 
-@Repository
-public class PersonRepository {
-    private final List<Person> persons = new ArrayList<>(List.of(
-            new Person(
-                    "1050b6b7-eb76-4dff-8d47-23a8120cfe21",
-                    "Carlo Miras",
-                    "Laguna",
-                    23,
-                    "29ca7596-8255-477e-b77c-462ad7c3f093")));
-
-    public Person getByName(String name) {
-        for (Person person : persons) {
-            if (name.equals(person.name())) return person;
-        }
-        return null;
-    }
-
-    public Person getByAddress(String address) {
-        for (Person person : persons) {
-            if (address.equals(person.address())) return person;
-        }
-        return null;
-    }
-
-    public void save(Person person) {
-        persons.add(person);
-    }
+public interface PersonRepository extends JpaRepository<Person, UUID> {
+    Person getFirstByName(String name);
+    Person getFirstByAddress(String address);
 }

@@ -1,3 +1,5 @@
 package com.example.integrationtestdemoformaya.domain;
 
-public record Wallet(String id) {}
+import java.util.UUID;
+
+public record Wallet(UUID id) {}

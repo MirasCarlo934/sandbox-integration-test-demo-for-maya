@@ -26,7 +26,7 @@ public class PersonCreationService {
     public Person create(CreatePersonCommand command) {
         personCreationValidatorService.validate(command);
         Wallet wallet = restWalletClient.create(command.rrn(), command.channel());
-        Person person = new Person(UUID.randomUUID().toString(), command.name(), command.address(), command.age(), wallet.id());
+        Person person = new Person(UUID.randomUUID(), command.name(), command.address(), command.age(), wallet.id());
         personRepository.save(person);
         return person;
     }

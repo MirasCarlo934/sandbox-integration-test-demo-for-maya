@@ -14,7 +14,7 @@ public class PersonSameAddressValidator implements Validator<CreatePersonCommand
     }
 
     public void validate(CreatePersonCommand command) {
-        if (personRepository.getByAddress(command.address()) != null) {
+        if (personRepository.getFirstByAddress(command.address()) != null) {
             throw new PersonAddressAlreadyTakenException(command);
         }
     }
