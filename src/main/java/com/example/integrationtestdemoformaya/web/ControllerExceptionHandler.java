@@ -45,7 +45,7 @@ public class ControllerExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    protected ResponseEntity<ErrorResponseBody> handleUncaughtException(RequestException ex) {
+    protected ResponseEntity<ErrorResponseBody> handleUncaughtException(Exception ex) {
         LOGGER.error("exception: {}", ex.getClass().getSimpleName(), ex);
         ErrorResponseMapping mapping = errorMappings.get(DEFAULT_MAPPING);
         return new ResponseEntity<>(new ErrorResponseBody(mapping.message()), HttpStatus.valueOf(mapping.status()));
