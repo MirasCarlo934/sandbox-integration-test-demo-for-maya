@@ -24,15 +24,14 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles(value = "local")
 class CreatePersonBasicIT {
     private static final String ENDPOINT_URL = "/persons";
-    private static final String VALID_REQUEST_FILE = "src/test/resources/requests/create-person-request.json";
+    private static final String REQUEST_FILE = "src/test/resources/requests/create-person-request.json";
 
     @Autowired
     private MockMvc mockMvc;
@@ -47,7 +46,7 @@ class CreatePersonBasicIT {
     @Test
     @Transactional
     void givenValidRequest_whenCreatePerson_thenRespondWithCreatedPerson() throws Exception {
-        JsonNode requestJson = requestJson(VALID_REQUEST_FILE);
+        JsonNode requestJson = requestJson(REQUEST_FILE);
 
         mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -68,6 +67,32 @@ class CreatePersonBasicIT {
                     assertEquals(requestJson.get("address").asText(), responseJson.get("address").asText());
                     assertEquals(requestJson.get("age").asInt(), responseJson.get("age").asInt());
                 });
+    }
+
+    @Test
+    @Transactional
+    void givenRequestWithPersonNameAlreadyExists_whenCreatePerson_thenReturn400() throws Exception {
+        JsonNode requestJson = requestJson(REQUEST_FILE);
+        String name = requestJson.get("name").asText();
+        String address = requestJson.get("address").asText();
+        int age = requestJson.get("age").asInt();
+
+        Person existingPerson = new Person(
+                UUID.randomUUID(),
+                name,
+                address,
+                age,
+                UUID.randomUUID());
+        personRepository.save(existingPerson);
+
+        mockMvc.perform(post(ENDPOINT_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson.toString())
+                        .header("request-reference-no", UUID.randomUUID().toString())
+                        .header("channel", "channel"))
+                .andExpect(status().is(400))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value(String.format("Person '%s' already exists", name)));
     }
 
     private JsonNode requestJson(String jsonFile) throws IOException {
