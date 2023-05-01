@@ -46,7 +46,7 @@ class CreatePersonBasicIT {
     @Test
     @Transactional
     void givenValidRequest_whenCreatePerson_thenRespondWithCreatedPerson() throws Exception {
-        JsonNode requestJson = requestJson(REQUEST_FILE);
+        JsonNode requestJson = requestJson();
 
         mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -72,18 +72,12 @@ class CreatePersonBasicIT {
     @Test
     @Transactional
     void givenRequestWithPersonNameAlreadyExists_whenCreatePerson_thenReturn400() throws Exception {
-        JsonNode requestJson = requestJson(REQUEST_FILE);
+        JsonNode requestJson = requestJson();
         String name = requestJson.get("name").asText();
-        String address = requestJson.get("address").asText();
-        int age = requestJson.get("age").asInt();
+        String address = "Some Random Address PH";
+        int age = 99;
 
-        Person existingPerson = new Person(
-                UUID.randomUUID(),
-                name,
-                address,
-                age,
-                UUID.randomUUID());
-        personRepository.save(existingPerson);
+        createExistingPersonInDb(name, address, age);
 
         mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -95,7 +89,37 @@ class CreatePersonBasicIT {
                 .andExpect(jsonPath("$.message").value(String.format("Person '%s' already exists", name)));
     }
 
-    private JsonNode requestJson(String jsonFile) throws IOException {
-        return objectMapper.readValue(new File(jsonFile), JsonNode.class);
+    @Test
+    @Transactional
+    void givenRequestWithPersonAddressAlreadyExists_whenCreatePerson_thenReturn400() throws Exception {
+        JsonNode requestJson = requestJson();
+        String name = "Some Random Name";
+        String address = requestJson.get("address").asText();
+        int age = 99;
+
+        createExistingPersonInDb(name, address, age);
+
+        mockMvc.perform(post(ENDPOINT_URL)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestJson.toString())
+                        .header("request-reference-no", UUID.randomUUID().toString())
+                        .header("channel", "channel"))
+                .andExpect(status().is(400))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value(String.format("Address '%s' already taken", address)));
+    }
+
+    @Transactional
+    protected void createExistingPersonInDb(String name, String address, int age) {
+        personRepository.save(new Person(
+                UUID.randomUUID(),
+                name,
+                address,
+                age,
+                UUID.randomUUID()));
+    }
+
+    private JsonNode requestJson() throws IOException {
+        return objectMapper.readValue(new File(REQUEST_FILE), JsonNode.class);
     }
 }
