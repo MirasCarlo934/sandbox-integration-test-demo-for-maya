@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles(value = "local")
-class CreatePersonBasicIT {
+class CreatePersonSemiIT {
     private static final String ENDPOINT_URL = "/persons";
     private static final String REQUEST_FILE = "src/test/resources/requests/create-person-request.json";
 
