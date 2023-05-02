@@ -38,6 +38,7 @@ class PersonCreatedEventSnsPublisherTest {
                 UUID.randomUUID(),
                 "Name McName",
                 "Address PH",
+                UUID.randomUUID(),
                 99);
 
         publisherToTest.publish(event);
@@ -55,6 +56,7 @@ class PersonCreatedEventSnsPublisherTest {
         assertEquals(event.id().toString(), payloadJson.get("id").asText());
         assertEquals(event.name(), payloadJson.get("name").asText());
         assertEquals(event.address(), payloadJson.get("address").asText());
+        assertEquals(event.walletId().toString(), payloadJson.get("walletId").asText());
         assertTrue(payloadJson.get("age").isNumber());
         assertEquals(event.age(), payloadJson.get("age").asInt());
     }

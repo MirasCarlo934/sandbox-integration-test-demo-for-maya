@@ -19,7 +19,7 @@ public class PersonCreatedEventSnsPublisher extends SnsPublisher<PersonCreatedEv
 
     @Override
     @SneakyThrows
-    void publish(PersonCreatedEvent event) {
+    public void publish(PersonCreatedEvent event) {
         publish(personSnsTopicArn, objectMapper.writeValueAsString(event));
     }
 }

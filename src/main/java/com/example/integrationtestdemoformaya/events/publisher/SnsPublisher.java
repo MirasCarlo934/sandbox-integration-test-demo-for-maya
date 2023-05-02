@@ -9,7 +9,7 @@ public abstract class SnsPublisher<T> {
         this.amazonSNS = amazonSNS;
     }
 
-    abstract void publish(T t);
+    public abstract void publish(T t);
 
     protected void publish(String topicArn, String payload) {
         amazonSNS.publish(topicArn, payload);

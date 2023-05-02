@@ -9,6 +9,8 @@ import com.example.integrationtestdemoformaya.events.dto.PersonCreatedEvent;
 import com.example.integrationtestdemoformaya.events.publisher.SnsPublisher;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 
 @Service
@@ -33,6 +35,7 @@ public class PersonCreationService {
         Wallet wallet = restWalletClient.create(command.rrn(), command.channel());
         Person person = new Person(UUID.randomUUID(), command.name(), command.address(), command.age(), wallet.id());
         personRepository.save(person);
+        personCreatedEventSnsPublisher.publish(PersonCreatedEvent.from(person, command.rrn(), command.channel(), Date.from(Instant.now())));
         return person;
     }
 }
