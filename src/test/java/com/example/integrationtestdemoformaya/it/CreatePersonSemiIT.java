@@ -1,6 +1,7 @@
 package com.example.integrationtestdemoformaya.it;
 
 import com.amazonaws.services.sns.AmazonSNS;
+import com.example.integrationtestdemoformaya.client.RestWalletClient;
 import com.example.integrationtestdemoformaya.data.PersonRepository;
 import com.example.integrationtestdemoformaya.domain.Person;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -25,7 +26,10 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atMostOnce;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -42,6 +46,8 @@ class CreatePersonSemiIT {
     @Autowired
     private ObjectMapper objectMapper;
     @SpyBean
+    private RestWalletClient restWalletClient;
+    @SpyBean
     private PersonRepository personRepository;
     @SpyBean
     private AmazonSNS amazonSNS;
@@ -56,18 +62,22 @@ class CreatePersonSemiIT {
     @Test
     @Transactional
     void givenValidRequest_whenCreatePerson_thenRespondWithCreatedPerson() throws Exception {
+        String rrn = UUID.randomUUID().toString();
+        String channel = "channel";
         JsonNode requestJson = requestJson();
 
         MockHttpServletResponse response = mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson.toString())
-                        .header("request-reference-no", UUID.randomUUID().toString())
-                        .header("channel", "channel"))
+                        .header("request-reference-no", rrn)
+                        .header("channel", channel))
                 .andExpect(status().is(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn().getResponse();
 
         JsonNode responseJson = objectMapper.readValue(response.getContentAsByteArray(), JsonNode.class);
+
+        verify(restWalletClient).create(rrn, channel);
 
         verify(personRepository).save(personCaptor.capture());
         Person savedPerson = personCaptor.getValue();
@@ -104,6 +114,10 @@ class CreatePersonSemiIT {
                 .andExpect(status().is(400))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value(String.format("Person '%s' already exists", name)));
+
+        verify(restWalletClient, never()).create(any(), any());
+        verify(personRepository, atMostOnce()).save(any()); // createExistingPersonInDb() calls personRepository.save()
+        verify(amazonSNS, never()).publish(any(), any());
     }
 
     @Test
@@ -124,6 +138,10 @@ class CreatePersonSemiIT {
                 .andExpect(status().is(400))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value(String.format("Address '%s' already taken", address)));
+
+        verify(restWalletClient, never()).create(any(), any());
+        verify(personRepository, atMostOnce()).save(any()); // createExistingPersonInDb() calls personRepository.save()
+        verify(amazonSNS, never()).publish(any(), any());
     }
 
     @Transactional
