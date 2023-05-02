@@ -34,6 +34,37 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * <p>This integration test class leverages the Wiremock, PostgreSQL, and Localstock Docker containers that are running
+ * locally.</p>
+ *
+ * <p>Before this test can be run, the following conditions must be met:</p>
+ * <ol>
+ *     <li>Run the Wiremock, PostgreSQL, and Localstack Docker containers</li>
+ *     <li>Run setup.sh
+ *     <ul>
+ *         <li>Must have stubbed responses of external service calls prepared in src/test/resources/stubs</li>
+ *     </ul>
+ *     </li>
+ * </ol>
+ *
+ * <p>Pros:</p>
+ * <ul>
+ *     <li>Quickest way to do "integration testing"</li>
+ *     <li>Requires no additional environment configuration</li>
+ * </ul>
+ *
+ * <p>Cons:</p>
+ * <ul>
+ *     <li>Not really an "integration test"
+ *     <ul>
+ *         <li>Only method calls are verified</li>
+ *     </ul>
+ *     </li>
+ *     <li>Since existing instances are used, existing values may affect test results (eg. stored DB entries in manual testing)</li>
+ *     <li>Each test case must ensure that the environment stays the same after testing</li>
+ * </ul>
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles(value = "local")
@@ -100,7 +131,7 @@ class CreatePersonSemiIT {
     @Transactional
     void givenRequestWithPersonNameAlreadyExists_whenCreatePerson_thenReturn400() throws Exception {
         JsonNode requestJson = requestJson();
-        String name = requestJson.get("name").asText();
+        String name = requestJson.get("name").textValue();
         String address = "Some Random Address PH";
         int age = 99;
 
@@ -125,7 +156,7 @@ class CreatePersonSemiIT {
     void givenRequestWithPersonAddressAlreadyExists_whenCreatePerson_thenReturn400() throws Exception {
         JsonNode requestJson = requestJson();
         String name = "Some Random Name";
-        String address = requestJson.get("address").asText();
+        String address = requestJson.get("address").textValue();
         int age = 99;
 
         createExistingPersonInDb(name, address, age);
