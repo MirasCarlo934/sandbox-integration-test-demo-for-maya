@@ -1,6 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+
 uri:
   wallet:
     scheme: http
     host: localhost:7000
     resource-path: 'wallets'
     timeout: 3000
+
+aws:
+  sns:
+    region: us-east-1
+    endpoint: http://localhost:4566
+    topic-arns:
+      persons: arn:aws:sns:us-east-1:000000000000:persons-sns-topic
