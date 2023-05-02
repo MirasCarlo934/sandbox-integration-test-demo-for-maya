@@ -28,7 +28,7 @@ public class RestWalletClient {
                     .bodyToMono(Wallet.class)
                     .block();
         } catch (WebClientResponseException e) {
-            throw new ClientResponseException(String.format("Response %s received from Wallet service", e.getStatusCode()), rrn, channel);
+            throw new ClientResponseException(String.format("Response %s received from Wallet service", e.getStatusCode()), rrn, channel, e);
         }
     }
 }

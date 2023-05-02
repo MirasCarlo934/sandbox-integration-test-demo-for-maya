@@ -9,8 +9,8 @@ public class ClientResponseException extends RuntimeException {
     String rrn;
     String channel;
 
-    public ClientResponseException(String message, String rrn, String channel) {
-        super(message);
+    public ClientResponseException(String message, String rrn, String channel, Throwable cause) {
+        super(message, cause);
         this.rrn = rrn;
         this.channel = channel;
     }

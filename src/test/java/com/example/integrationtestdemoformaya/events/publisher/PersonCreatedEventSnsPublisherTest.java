@@ -22,7 +22,7 @@ class PersonCreatedEventSnsPublisherTest {
     private static final String TOPIC_ARN = "topic-arn";
 
     private final AmazonSNS mockAmazonSNS = mock(AmazonSNS.class);
-    private final ObjectMapper objectMapper = TestFixtures.objectMapper;
+    private final ObjectMapper objectMapper = TestFixtures.OBJECT_MAPPER;
 
     private final PersonCreatedEventSnsPublisher publisherToTest = new PersonCreatedEventSnsPublisher(
             mockAmazonSNS,
