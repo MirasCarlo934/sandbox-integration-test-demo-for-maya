@@ -1,6 +1,7 @@
 package com.example.integrationtestdemoformaya.it;
 
 import com.amazonaws.services.sns.AmazonSNS;
+import com.example.integrationtestdemoformaya.TestFixtures;
 import com.example.integrationtestdemoformaya.client.RestWalletClient;
 import com.example.integrationtestdemoformaya.data.PersonRepository;
 import com.example.integrationtestdemoformaya.domain.Person;
@@ -100,8 +101,8 @@ class CreatePersonSemiIT {
         MockHttpServletResponse response = mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson.toString())
-                        .header("request-reference-no", rrn)
-                        .header("channel", channel))
+                        .header(TestFixtures.HEADER_REQUEST_REFERENCE_NO, rrn)
+                        .header(TestFixtures.HEADER_CHANNEL, channel))
                 .andExpect(status().is(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn().getResponse();
@@ -140,8 +141,8 @@ class CreatePersonSemiIT {
         mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson.toString())
-                        .header("request-reference-no", UUID.randomUUID().toString())
-                        .header("channel", "channel"))
+                        .header(TestFixtures.HEADER_REQUEST_REFERENCE_NO, UUID.randomUUID().toString())
+                        .header(TestFixtures.HEADER_CHANNEL, "channel"))
                 .andExpect(status().is(400))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value(String.format("Person '%s' already exists", name)));
@@ -164,8 +165,8 @@ class CreatePersonSemiIT {
         mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson.toString())
-                        .header("request-reference-no", UUID.randomUUID().toString())
-                        .header("channel", "channel"))
+                        .header(TestFixtures.HEADER_REQUEST_REFERENCE_NO, UUID.randomUUID().toString())
+                        .header(TestFixtures.HEADER_CHANNEL, "channel"))
                 .andExpect(status().is(400))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value(String.format("Address '%s' already taken", address)));

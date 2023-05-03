@@ -1,6 +1,7 @@
 package com.example.integrationtestdemoformaya.it;
 
 import com.amazonaws.services.sns.AmazonSNS;
+import com.example.integrationtestdemoformaya.TestFixtures;
 import com.example.integrationtestdemoformaya.data.PersonRepository;
 import com.example.integrationtestdemoformaya.domain.Person;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -8,20 +9,27 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.client.WireMock;
 import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.shaded.org.bouncycastle.util.Strings;
+import org.testcontainers.utility.DockerImageName;
 
 import java.io.File;
 import java.io.IOException;
@@ -45,9 +53,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SNS;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 
 @SpringBootTest
 @WireMockTest(httpPort = WIREMOCK_PORT)
+@Testcontainers
 @AutoConfigureMockMvc
 @ActiveProfiles(value = "local-it")
 class CreatePersonFullIT {
@@ -55,6 +66,11 @@ class CreatePersonFullIT {
     private static final String ENDPOINT_URL = "/persons";
     private static final String REQUEST_FILE = "src/test/resources/requests/create-person-request.json";
     private static final String CREATE_NEW_WALLET_RESPONSE_FILE = "src/test/resources/responses/walletservice-create-new-wallet-200.json";
+
+    @Container
+    private static final LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse("localstack/localstack:latest"))
+            .withServices(SNS, SQS);
+    private static String personsTopic;
 
     @Autowired
     private MockMvc mockMvc;
@@ -64,13 +80,30 @@ class CreatePersonFullIT {
     private PersonRepository personRepository;
     @SpyBean
     private AmazonSNS amazonSNS;
-    @Value("${aws.sns.topic-arns.persons}")
-    private String personsTopic;
 
     @Captor
     private ArgumentCaptor<String> snsMessagePayloadCaptor;
     @Captor
     private ArgumentCaptor<Person> personCaptor;
+
+    @DynamicPropertySource
+    static void overrideConfiguration(DynamicPropertyRegistry registry) {
+        registry.add("aws.sns.region", localStackContainer::getRegion);
+        registry.add("aws.sns.endpoint", () -> localStackContainer.getEndpointOverride(SNS));
+    }
+
+    @BeforeAll
+    static void beforeAll() throws IOException, InterruptedException {
+        String awsRegion = localStackContainer.getRegion();
+        personsTopic = String.format("arn:aws:sns:%s:000000000000:persons-sns-topic", awsRegion);
+
+        localStackContainer.execInContainer(Strings.split("awslocal sqs create-queue --queue-name=persons-queue", ' '));
+        localStackContainer.execInContainer(Strings.split("awslocal sns create-topic --name persons-sns-topic", ' '));
+        localStackContainer.execInContainer(Strings.split("awslocal sns subscribe" +
+                String.format(" --topic-arn=%s", personsTopic) +
+                " --protocol=sqs" +
+                String.format(" --notification-endpoint=arn:aws:sqs:%s:000000000000:persons-queue", awsRegion), ' '));
+    }
 
     @BeforeEach
     void setUp(WireMockRuntimeInfo wireMockRuntimeInfo) throws IOException {
@@ -94,8 +127,8 @@ class CreatePersonFullIT {
         MockHttpServletResponse response = mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson.toString())
-                        .header("request-reference-no", rrn)
-                        .header("channel", channel))
+                        .header(TestFixtures.HEADER_REQUEST_REFERENCE_NO, rrn)
+                        .header(TestFixtures.HEADER_CHANNEL, channel))
                 .andExpect(status().is(200))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andReturn().getResponse();
@@ -103,8 +136,8 @@ class CreatePersonFullIT {
         JsonNode responseJson = objectMapper.readValue(response.getContentAsByteArray(), JsonNode.class);
 
         WireMock.verify(postRequestedFor(urlEqualTo("/wallets"))
-                .withHeader("request-reference-no", equalTo(rrn))
-                .withHeader("channel", equalTo(channel)));
+                .withHeader(TestFixtures.HEADER_REQUEST_REFERENCE_NO, equalTo(rrn))
+                .withHeader(TestFixtures.HEADER_CHANNEL, equalTo(channel)));
 
         verify(personRepository).save(personCaptor.capture());
         Person savedPerson = personCaptor.getValue();
@@ -136,8 +169,8 @@ class CreatePersonFullIT {
         mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson.toString())
-                        .header("request-reference-no", UUID.randomUUID().toString())
-                        .header("channel", "channel"))
+                        .header(TestFixtures.HEADER_REQUEST_REFERENCE_NO, UUID.randomUUID().toString())
+                        .header(TestFixtures.HEADER_CHANNEL, "channel"))
                 .andExpect(status().is(400))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value(String.format("Person '%s' already exists", name)));
@@ -160,8 +193,8 @@ class CreatePersonFullIT {
         mockMvc.perform(post(ENDPOINT_URL)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson.toString())
-                        .header("request-reference-no", UUID.randomUUID().toString())
-                        .header("channel", "channel"))
+                        .header(TestFixtures.HEADER_REQUEST_REFERENCE_NO, UUID.randomUUID().toString())
+                        .header(TestFixtures.HEADER_CHANNEL, "channel"))
                 .andExpect(status().is(400))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value(String.format("Address '%s' already taken", address)));
