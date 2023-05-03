@@ -1,11 +1,14 @@
 package com.example.integrationtestdemoformaya.it;
 
 import com.amazonaws.services.sns.AmazonSNS;
-import com.example.integrationtestdemoformaya.client.RestWalletClient;
 import com.example.integrationtestdemoformaya.data.PersonRepository;
 import com.example.integrationtestdemoformaya.domain.Person;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
+import com.github.tomakehurst.wiremock.junit5.WireMockTest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -24,6 +27,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 
+import static com.example.integrationtestdemoformaya.TestFixtures.OBJECT_MAPPER;
+import static com.example.integrationtestdemoformaya.it.CreatePersonFullIT.WIREMOCK_PORT;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,18 +47,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
+@WireMockTest(httpPort = WIREMOCK_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles(value = "local-it")
 class CreatePersonFullIT {
+    public static final int WIREMOCK_PORT = 9999;
     private static final String ENDPOINT_URL = "/persons";
     private static final String REQUEST_FILE = "src/test/resources/requests/create-person-request.json";
+    private static final String CREATE_NEW_WALLET_RESPONSE_FILE = "src/test/resources/responses/walletservice-create-new-wallet-200.json";
 
     @Autowired
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
-    @SpyBean
-    private RestWalletClient restWalletClient;
     @SpyBean
     private PersonRepository personRepository;
     @SpyBean
@@ -60,6 +71,18 @@ class CreatePersonFullIT {
     private ArgumentCaptor<String> snsMessagePayloadCaptor;
     @Captor
     private ArgumentCaptor<Person> personCaptor;
+
+    @BeforeEach
+    void setUp(WireMockRuntimeInfo wireMockRuntimeInfo) throws IOException {
+        WireMock wireMock = wireMockRuntimeInfo.getWireMock();
+
+        JsonNode createNewWalletResponse = OBJECT_MAPPER.readValue(new File(CREATE_NEW_WALLET_RESPONSE_FILE), JsonNode.class);
+        wireMock.register(stubFor(WireMock
+                .post("/wallets")
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                        .withBody(createNewWalletResponse.toString()))));
+    }
 
     @Test
     @Transactional
@@ -79,7 +102,9 @@ class CreatePersonFullIT {
 
         JsonNode responseJson = objectMapper.readValue(response.getContentAsByteArray(), JsonNode.class);
 
-        verify(restWalletClient).create(rrn, channel);
+        WireMock.verify(postRequestedFor(urlEqualTo("/wallets"))
+                .withHeader("request-reference-no", equalTo(rrn))
+                .withHeader("channel", equalTo(channel)));
 
         verify(personRepository).save(personCaptor.capture());
         Person savedPerson = personCaptor.getValue();
@@ -117,7 +142,7 @@ class CreatePersonFullIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value(String.format("Person '%s' already exists", name)));
 
-        verify(restWalletClient, never()).create(any(), any());
+        WireMock.verify(0, postRequestedFor(urlEqualTo("/wallets")));
         verify(personRepository, atMostOnce()).save(any()); // createExistingPersonInDb() calls personRepository.save()
         verify(amazonSNS, never()).publish(any(), any());
     }
@@ -141,7 +166,7 @@ class CreatePersonFullIT {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.message").value(String.format("Address '%s' already taken", address)));
 
-        verify(restWalletClient, never()).create(any(), any());
+        WireMock.verify(0, postRequestedFor(urlEqualTo("/wallets")));
         verify(personRepository, atMostOnce()).save(any()); // createExistingPersonInDb() calls personRepository.save()
         verify(amazonSNS, never()).publish(any(), any());
     }

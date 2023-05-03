@@ -11,7 +11,7 @@ spring:
 uri:
   wallet:
     scheme: http
-    host: localhost:7000
+    host: localhost:9999
     resource-path: 'wallets'
     timeout: 3000
 
