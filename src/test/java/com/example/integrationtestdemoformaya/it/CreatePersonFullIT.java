@@ -1,6 +1,11 @@
 package com.example.integrationtestdemoformaya.it;
 
-import com.amazonaws.services.sns.AmazonSNS;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.model.Message;
 import com.example.integrationtestdemoformaya.TestFixtures;
 import com.example.integrationtestdemoformaya.data.PersonRepository;
 import com.example.integrationtestdemoformaya.domain.Person;
@@ -33,6 +38,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.UUID;
 
 import static com.example.integrationtestdemoformaya.TestFixtures.OBJECT_MAPPER;
@@ -44,10 +50,9 @@ import static com.github.tomakehurst.wiremock.client.WireMock.stubFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atMostOnce;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -63,6 +68,7 @@ import static org.testcontainers.containers.localstack.LocalStackContainer.Servi
 @ActiveProfiles(value = "local-it")
 class CreatePersonFullIT {
     public static final int WIREMOCK_PORT = 9999;
+    private static final String SQS_PERSONS_QUEUE = "persons-queue";
     private static final String ENDPOINT_URL = "/persons";
     private static final String REQUEST_FILE = "src/test/resources/requests/create-person-request.json";
     private static final String CREATE_NEW_WALLET_RESPONSE_FILE = "src/test/resources/responses/walletservice-create-new-wallet-200.json";
@@ -70,7 +76,7 @@ class CreatePersonFullIT {
     @Container
     private static final LocalStackContainer localStackContainer = new LocalStackContainer(DockerImageName.parse("localstack/localstack:latest"))
             .withServices(SNS, SQS);
-    private static String personsTopic;
+    private static AmazonSQS mockAmazonSQS;
 
     @Autowired
     private MockMvc mockMvc;
@@ -78,11 +84,7 @@ class CreatePersonFullIT {
     private ObjectMapper objectMapper;
     @SpyBean
     private PersonRepository personRepository;
-    @SpyBean
-    private AmazonSNS amazonSNS;
 
-    @Captor
-    private ArgumentCaptor<String> snsMessagePayloadCaptor;
     @Captor
     private ArgumentCaptor<Person> personCaptor;
 
@@ -95,14 +97,25 @@ class CreatePersonFullIT {
     @BeforeAll
     static void beforeAll() throws IOException, InterruptedException {
         String awsRegion = localStackContainer.getRegion();
-        personsTopic = String.format("arn:aws:sns:%s:000000000000:persons-sns-topic", awsRegion);
+        String snsPersonsTopicArn = String.format("arn:aws:sns:%s:000000000000:persons-sns-topic", awsRegion);
 
-        localStackContainer.execInContainer(Strings.split("awslocal sqs create-queue --queue-name=persons-queue", ' '));
+        localStackContainer.execInContainer(Strings.split(String.format("awslocal sqs create-queue --queue-name=%s", SQS_PERSONS_QUEUE), ' '));
+
         localStackContainer.execInContainer(Strings.split("awslocal sns create-topic --name persons-sns-topic", ' '));
         localStackContainer.execInContainer(Strings.split("awslocal sns subscribe" +
-                String.format(" --topic-arn=%s", personsTopic) +
+                String.format(" --topic-arn=%s", snsPersonsTopicArn) +
                 " --protocol=sqs" +
-                String.format(" --notification-endpoint=arn:aws:sqs:%s:000000000000:persons-queue", awsRegion), ' '));
+                String.format(" --notification-endpoint=arn:aws:sqs:%s:000000000000:%s", awsRegion, SQS_PERSONS_QUEUE), ' '));
+
+        mockAmazonSQS = AmazonSQSClientBuilder
+                .standard()
+                .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(
+                        localStackContainer.getEndpointOverride(SQS).toString(),
+                        localStackContainer.getRegion()))
+                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(
+                        localStackContainer.getAccessKey(),
+                        localStackContainer.getSecretKey())))
+                .build();
     }
 
     @BeforeEach
@@ -147,8 +160,10 @@ class CreatePersonFullIT {
         assertEquals(requestJson.get("address").textValue(), responseJson.get("address").textValue());
         assertEquals(requestJson.get("age").intValue(), responseJson.get("age").intValue());
 
-        verify(amazonSNS).publish(eq(personsTopic), snsMessagePayloadCaptor.capture());
-        JsonNode messagePayloadJson = objectMapper.readValue(snsMessagePayloadCaptor.getValue(), JsonNode.class);
+        List<Message> sqsReceivedMessages = mockAmazonSQS.receiveMessage(mockAmazonSQS.getQueueUrl(SQS_PERSONS_QUEUE).getQueueUrl()).getMessages();
+        assertEquals(1, sqsReceivedMessages.size());
+        String messageBody = objectMapper.readValue(sqsReceivedMessages.get(0).getBody(), JsonNode.class).get("Message").textValue();
+        JsonNode messagePayloadJson = objectMapper.readValue(messageBody, JsonNode.class);
         assertEquals(savedPerson.getId().toString(), messagePayloadJson.get("id").textValue());
         assertEquals(savedPerson.getWalletId().toString(), messagePayloadJson.get("walletId").textValue());
         assertEquals(savedPerson.getName(), messagePayloadJson.get("name").textValue());
@@ -177,7 +192,7 @@ class CreatePersonFullIT {
 
         WireMock.verify(0, postRequestedFor(urlEqualTo("/wallets")));
         verify(personRepository, atMostOnce()).save(any()); // createExistingPersonInDb() calls personRepository.save()
-        verify(amazonSNS, never()).publish(any(), any());
+        assertTrue(mockAmazonSQS.receiveMessage(mockAmazonSQS.getQueueUrl(SQS_PERSONS_QUEUE).getQueueUrl()).getMessages().isEmpty());
     }
 
     @Test
@@ -201,7 +216,7 @@ class CreatePersonFullIT {
 
         WireMock.verify(0, postRequestedFor(urlEqualTo("/wallets")));
         verify(personRepository, atMostOnce()).save(any()); // createExistingPersonInDb() calls personRepository.save()
-        verify(amazonSNS, never()).publish(any(), any());
+        assertTrue(mockAmazonSQS.receiveMessage(mockAmazonSQS.getQueueUrl(SQS_PERSONS_QUEUE).getQueueUrl()).getMessages().isEmpty());
     }
 
     @Transactional

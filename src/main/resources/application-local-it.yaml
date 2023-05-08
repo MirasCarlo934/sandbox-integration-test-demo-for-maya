@@ -21,3 +21,6 @@ aws:
     endpoint: http://localhost:4566
     topic-arns:
       persons: arn:aws:sns:us-east-1:000000000000:persons-sns-topic
+  sqs:
+    queues:
+      persons: persons-queue
